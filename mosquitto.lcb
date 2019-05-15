@@ -8,6 +8,7 @@ library community.livecode.trevordevore.mosquitto
   metadata version is "0.0.1"
 
   public type Mosquitto is Pointer // to struct
+  public type Mosquitto_Message is Pointer // to struct
 
   foreign handler mosquitto_lib_version (inout pMajor as CInt, inout pMinor as CInt, inout pRevision as CInt) \
         returns CInt \
@@ -31,6 +32,19 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_reinitialise"
 
+  foreign handler mosquitto_publish (in pMosquitto as Mosquitto, inout rMessageId as optional CInt, in pTopic as ZStringNative, \
+        in pPayloadLength as CInt, in pPayload as optional Pointer, in pQoS as CInt, in pRetain as CBool) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_publish"
+
+  foreign handler mosquitto_subscribe (in pMosquitto as Mosquitto, inout rMessageId as optional CInt, in pSubPattern as ZStringNative, in pQoS as CInt) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_subscribe"
+
+  foreign handler mosquitto_unsubscribe (in pMosquitto as Mosquitto, inout rMessageId as optional CInt, in pUnsubPattern as ZStringNative, in pQoS as CInt) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_unsubscribe"
+
 
   // Connect/disconnect
   foreign handler mosquitto_connect (in pMosquitto as Mosquitto, in pHost as ZStringNative, in pPort as CInt, in pKeepAlive as CInt) \
@@ -45,12 +59,37 @@ library community.livecode.trevordevore.mosquitto
   foreign handler MCHandlerGetFunctionPtr(in pHandler as any, out rFuncPtr as Pointer) returns CBool binds to "<builtin>"
 
   // Callbacks
-  public foreign handler type mosquitto_connect_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
+  public foreign handler type mosquitto_connect_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pReturnCode as CInt) returns nothing
+  public foreign handler type mosquitto_disconnect_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pReasonCode as CInt) returns nothing
+  public foreign handler type mosquitto_publish_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
+  public foreign handler type mosquitto_message_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as Mosquitto_Message) returns nothing
+  public foreign handler type mosquitto_subscribe_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt, in pQoSCount as CInt, inout pGrantedQoSArray as CInt) returns nothing
+  public foreign handler type mosquitto_unsubscribe_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
   public foreign handler type mosquitto_log_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative) returns nothing
 
   foreign handler mosquitto_connect_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_connect_callback) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_connect_callback_set"
+
+  foreign handler mosquitto_disconnect_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_disconnect_callback) \
+        returns nothing \
+        binds to "c:libmosquitto>mosquitto_disconnect_callback_set"
+
+  foreign handler mosquitto_publish_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_publish_callback) \
+        returns nothing \
+        binds to "c:libmosquitto>mosquitto_publish_callback_set"
+
+  foreign handler mosquitto_message_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_message_callback) \
+        returns nothing \
+        binds to "c:libmosquitto>mosquitto_message_callback_set"
+
+  foreign handler mosquitto_subscribe_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_subscribe_callback) \
+        returns nothing \
+        binds to "c:libmosquitto>mosquitto_subscribe_callback_set"
+
+  foreign handler mosquitto_unsubscribe_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_unsubscribe_callback) \
+        returns nothing \
+        binds to "c:libmosquitto>mosquitto_unsubscribe_callback_set"
 
   foreign handler mosquitto_log_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_log_callback) \
         returns nothing \
@@ -74,27 +113,18 @@ library community.livecode.trevordevore.mosquitto
 
   Returns: nothing
   */
-  public handler TestMosquitto() returns nothing
-    variable tMajor as Integer
-    variable tMinor as Integer
-    variable tRevision as Integer
-    variable tResult as Integer
-
+  public handler MosquittoInitialize() returns nothing
     unsafe
       mosquitto_lib_init()
 
-      put mosquitto_lib_version(tMajor, tMinor, tRevision) into tResult
-      log [tMajor, tMinor, tRevision]
-
-      put mosquitto_new("test.test.test", true, nothing) into mMosquitto
-      log mMosquitto
+      put mosquitto_new(nothing, true, nothing) into mMosquitto
 
       if mMosquitto is not nothing then
         mosquitto_log_callback_set(mMosquitto, LogCallback)
         mosquitto_connect_callback_set(mMosquitto, ConnectCallback)
-
-        put mosquitto_connect(mMosquitto, "test.mosquitto.org", 1883, 60) into tResult
-        log ["tResult", tResult]
+        mosquitto_publish_callback_set(mMosquitto, PublishCallback)
+        mosquitto_message_callback_set(mMosquitto, MessageCallback)
+        mosquitto_subscribe_callback_set(mMosquitto, SubscribeCallback)
 
         variable tDoRunLoopFunc as MCRunloopActionCallback
         variable tContext as optional Pointer
@@ -108,7 +138,56 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
-  public handler FinishMosquittoTest() returns nothing
+  public handler MosquittoVersion() returns String
+    variable tMajor as Integer
+    variable tMinor as Integer
+    variable tRevision as Integer
+    variable tResult as Integer
+
+    unsafe
+      put mosquitto_lib_version(tMajor, tMinor, tRevision) into tResult
+    end unsafe
+
+    return tMajor formatted as string & "." & tMinor formatted as string & "." & tRevision formatted as string
+  end handler
+
+
+  public handler MosquittoConnect(in pHost as String, in pPort as Integer, in pKeepAlive as Integer) returns String
+    variable tResult as Integer
+
+    unsafe
+      put mosquitto_connect (mMosquitto, pHost, pPort, pKeepAlive) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
+  public handler MosquittoPublish(in pTopic as String, in pQualityOfService as Integer) returns String
+    variable messageId as Integer
+    variable tResult as Integer
+
+    -- 0: The broker/client will deliver the message once, with no confirmation.
+    -- 1: The broker/client will deliver the message at least once, with confirmation required.
+    -- 2: The broker/client will deliver the message exactly once by using a four step handshake.
+    unsafe
+      put mosquitto_publish (mMosquitto, messageId, pTopic, 0, nothing, pQualityOfService, false) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
+  public handler MosquittoSubscribe(in pTopic as String, in pQualityOfService as Integer) returns String
+    variable messageId as Integer
+    variable tResult as Integer
+
+    unsafe
+      put mosquitto_subscribe (mMosquitto, messageId, pTopic, pQualityOfService) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
+  public handler MosquittoCleanup() returns nothing
     unsafe
       MCEngineRemoveRunloopAction(mRunloopAction)
       mosquitto_disconnect(mMosquitto)
@@ -126,13 +205,50 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
+  private handler ConnectCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
+    log ["ConnectCallback", pResult]
+  end handler
+
+
+  private handler PublishCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
+    log ["PublishCallback", pMessageId]
+  end handler
+
+
+  private handler MessageCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as Mosquitto_Message) returns nothing
+    log ["MessageCallback"]
+  end handler
+
+
+  private handler SubscribeCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt, in pQoSCount as CInt, inout pGrantedQoSArray as optional CInt) returns nothing
+    log ["SubscribeCallback", pMessageId]
+  end handler
+
+
   /* in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative */
   private handler LogCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative) returns nothing
     log["LogCallback", pLevel, pString]
   end handler
 
 
-  private handler ConnectCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
-    log ["ConnectCallback", pResult]
+  private handler resolveErrorMessage(in pErrNumber as Integer) returns String
+    if pErrNumber is 0 then
+      return ""
+    else if pErrNumber is 1 then
+      return "out of memory"
+    else if pErrNumber is 2 then
+      return "protocol error communicating with the broker"
+    else if pErrNumber is 3 then
+      return "the input parameters were invalid"
+    else if pErrNumber is 4 then
+      return "the client isn't connected to the broker"
+    else if pErrNumber is 9 then
+      return "payload length is too large"
+    else if pErrNumber is 14 then
+      // System call returned error. Use strerror_r() where available or FormatMessage() on Windows.
+      return "system error"
+    else if pErrNumber is 18 then
+      return "topic contains invalid UTF-8"
+    end if
   end handler
 end library
