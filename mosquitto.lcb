@@ -104,38 +104,17 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_loop_forever"
 
+  foreign handler mosquitto_loop_start (in pMosquitto as Mosquitto) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_loop_start"
+
+  foreign handler mosquitto_loop_stop (in pMosquitto as Mosquitto, in pForce as CBool) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_loop_stop"
+
   private variable mRunloopAction as MCRunloopActionRef
   private variable mMosquitto as optional Mosquitto
-
-
-  /**
-  Summary: Handler for testing during development
-
-  Returns: nothing
-  */
-  public handler MosquittoInitialize() returns nothing
-    unsafe
-      mosquitto_lib_init()
-
-      put mosquitto_new(nothing, true, nothing) into mMosquitto
-
-      if mMosquitto is not nothing then
-        mosquitto_log_callback_set(mMosquitto, LogCallback)
-        mosquitto_connect_callback_set(mMosquitto, ConnectCallback)
-        mosquitto_publish_callback_set(mMosquitto, PublishCallback)
-        mosquitto_message_callback_set(mMosquitto, MessageCallback)
-        mosquitto_subscribe_callback_set(mMosquitto, SubscribeCallback)
-
-        variable tDoRunLoopFunc as MCRunloopActionCallback
-        variable tContext as optional Pointer
-        if MCHandlerGetFunctionPtr(doRunLoop, tDoRunLoopFunc) then
-          MCEngineAddRunloopAction(tDoRunLoopFunc, tContext, mRunloopAction)
-        else
-          log "Unable to set run loop"
-        end if
-      end if
-    end unsafe
-  end handler
+  private variable mUseThreads as Boolean
 
 
   public handler MosquittoVersion() returns String
@@ -149,6 +128,58 @@ library community.livecode.trevordevore.mosquitto
     end unsafe
 
     return tMajor formatted as string & "." & tMinor formatted as string & "." & tRevision formatted as string
+  end handler
+
+
+  /**
+  Summary: Handler for testing during development
+
+  Returns: nothing
+  */
+  public handler MosquittoInitialize(in pUseThreads as Boolean) returns nothing
+    put pUseThreads into mUseThreads
+
+    unsafe
+      mosquitto_lib_init()
+
+      put mosquitto_new(nothing, true, nothing) into mMosquitto
+
+      if mMosquitto is not nothing then
+        mosquitto_log_callback_set(mMosquitto, LogCallback)
+        mosquitto_connect_callback_set(mMosquitto, ConnectCallback)
+        mosquitto_publish_callback_set(mMosquitto, PublishCallback)
+        mosquitto_message_callback_set(mMosquitto, MessageCallback)
+        mosquitto_subscribe_callback_set(mMosquitto, SubscribeCallback)
+
+        if mUseThreads then
+          mosquitto_loop_start(mMosquitto)
+          log "using threads"
+        else
+          variable tDoRunLoopFunc as MCRunloopActionCallback
+          variable tContext as optional Pointer
+          if MCHandlerGetFunctionPtr(doRunLoop, tDoRunLoopFunc) then
+            MCEngineAddRunloopAction(tDoRunLoopFunc, tContext, mRunloopAction)
+          else
+            log "Unable to set run loop"
+          end if
+        end if
+      end if
+    end unsafe
+  end handler
+
+
+  public handler MosquittoCleanup() returns nothing
+    unsafe
+      if mUseThreads then
+        mosquitto_disconnect(mMosquitto)
+        mosquitto_loop_stop(mMosquitto, true)
+      else
+        MCEngineRemoveRunloopAction(mRunloopAction)
+      end if
+      mosquitto_destroy(mMosquitto)
+      mosquitto_lib_cleanup()
+      put nothing into mMosquitto
+    end unsafe
   end handler
 
 
@@ -184,17 +215,6 @@ library community.livecode.trevordevore.mosquitto
       put mosquitto_subscribe (mMosquitto, messageId, pTopic, pQualityOfService) into tResult
     end unsafe
     return resolveErrorMessage(tResult)
-  end handler
-
-
-  public handler MosquittoCleanup() returns nothing
-    unsafe
-      MCEngineRemoveRunloopAction(mRunloopAction)
-      mosquitto_disconnect(mMosquitto)
-      mosquitto_destroy(mMosquitto)
-      mosquitto_lib_cleanup()
-      put nothing into mMosquitto
-    end unsafe
   end handler
 
 
@@ -244,6 +264,8 @@ library community.livecode.trevordevore.mosquitto
       return "the client isn't connected to the broker"
     else if pErrNumber is 9 then
       return "payload length is too large"
+    else if pErrNumber is 10 then
+      return "thread support is not enabled"
     else if pErrNumber is 14 then
       // System call returned error. Use strerror_r() where available or FormatMessage() on Windows.
       return "system error"
