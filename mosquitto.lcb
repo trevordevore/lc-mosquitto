@@ -218,6 +218,17 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
+  public handler MosquittoUnsubscribe(in pTopic as String, in pQualityOfService as Integer) returns String
+    variable messageId as Integer
+    variable tResult as Integer
+
+    unsafe
+      put mosquitto_unsubscribe (mMosquitto, messageId, pTopic, pQualityOfService) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
   private handler doRunLoop(in pContext as optional Pointer) returns nothing
     unsafe
       mosquitto_loop(mMosquitto, -1, 1)
