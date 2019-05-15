@@ -1,0 +1,131 @@
+library community.livecode.trevordevore.mosquitto
+
+  use com.livecode.engine
+  use com.livecode.foreign
+
+  metadata title is "Mosquitto"
+  metadata author is "Trevor DeVore"
+  metadata version is "0.0.1"
+
+  public type Mosquitto is Pointer // to struct
+
+  foreign handler mosquitto_lib_version (inout pMajor as CInt, inout pMinor as CInt, inout pRevision as CInt) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_lib_version"
+
+  foreign handler mosquitto_lib_init () \
+        returns nothing binds to "c:libmosquitto>mosquitto_lib_init"
+
+  foreign handler mosquitto_lib_cleanup () \
+        returns nothing binds to "c:libmosquitto>mosquitto_lib_cleanup"
+
+  foreign handler mosquitto_new (in pId as optional ZStringNative, in pCleanSession as CBool, in pUserData as optional Pointer) \
+        returns Mosquitto \
+        binds to "c:libmosquitto>mosquitto_new"
+
+  foreign handler mosquitto_destroy (in pMosquitto as Mosquitto) \
+        returns nothing \
+        binds to "c:libmosquitto>mosquitto_destroy"
+
+  foreign handler mosquitto_reinitialise (in pMosquitto as Mosquitto, in pId as optional ZStringNative, in pCleanSession as CBool, in pUserData as optional Pointer) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_reinitialise"
+
+
+  // Connect/disconnect
+  foreign handler mosquitto_connect (in pMosquitto as Mosquitto, in pHost as ZStringNative, in pPort as CInt, in pKeepAlive as CInt) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_connect"
+
+  foreign handler mosquitto_disconnect (in pMosquitto as Mosquitto) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_disconnect"
+
+  // Callbacks
+  public foreign handler type mosquitto_connect_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
+  public foreign handler type mosquitto_log_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative) returns nothing
+
+  foreign handler mosquitto_connect_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_connect_callback) \
+        returns nothing \
+        binds to "c:libmosquitto>mosquitto_connect_callback_set"
+
+  foreign handler mosquitto_log_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_log_callback) \
+        returns nothing \
+        binds to "c:libmosquitto>mosquitto_log_callback_set"
+
+  // Netowrk loop
+  foreign handler mosquitto_loop (in pMosquitto as Mosquitto, in pTimeout as CInt, in pMaxPackets as CInt) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_loop"
+
+  foreign handler mosquitto_loop_forever (in pMosquitto as Mosquitto, in pTimeout as CInt, in pMaxPackets as CInt) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_loop_forever"
+
+
+  variable mMosquitto as optional Mosquitto
+
+
+  /**
+  Summary: Hanlder for testing PahoMQTT during development
+
+  Returns: nothing
+  */
+  public handler TestMosquitto() returns nothing
+    variable tMajor as Integer
+    variable tMinor as Integer
+    variable tRevision as Integer
+    variable tResult as Integer
+
+    unsafe
+      mosquitto_lib_init()
+
+      put mosquitto_lib_version(tMajor, tMinor, tRevision) into tResult
+      log [tMajor, tMinor, tRevision]
+
+      put mosquitto_new("test.test.test", true, nothing) into mMosquitto
+      log mMosquitto
+
+      if mMosquitto is not nothing then
+        mosquitto_log_callback_set(mMosquitto, LogCallback)
+        -- mosquitto_connect_callback_set(mMosquitto, ConnectCallback)
+
+        put mosquitto_connect(mMosquitto, "test.mosquitto.org", 1883, 60) into tResult
+        log ["tResult", tResult]
+
+        -- mosquitto_loop_forever(mMosquitto, -1, 1)
+
+        -- mosquitto_destroy(mMosquitto)
+        -- mosquitto_lib_cleanup()
+      end if
+    end unsafe
+  end handler
+
+
+  public handler FinishMosquittoTest () returns nothing
+    unsafe
+      mosquitto_disconnect(mMosquitto)
+      mosquitto_destroy(mMosquitto)
+      mosquitto_lib_cleanup()
+    end unsafe
+  end handler
+
+
+  public handler MosquittoLoop() returns nothing
+    unsafe
+      // Crash!
+      mosquitto_loop(mMosquitto, -1, 1)
+    end unsafe
+  end handler
+
+
+  /* in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative */
+  handler LogCallback(in pMosquitto as Pointer, in pUserData as Pointer, in pLevel as Integer, in pString as String) returns nothing
+    log["LogCallback", pLevel]
+  end handler
+
+
+  handler ConnectCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as Integer) returns nothing
+    log ["ConnectCallback", pResult]
+  end handler
+end library
