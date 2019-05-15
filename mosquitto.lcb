@@ -41,6 +41,10 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_disconnect"
 
+  // Run loop
+  public foreign handler MCBrowserLibraryGetRunloopCallback(out rCallback as MCRunloopActionCallback, out rContext as optional Pointer) returns CBool binds to "<builtin>"
+  public foreign handler type MCRunloopActionCallback(in pContext as optional Pointer) returns nothing
+
   // Callbacks
   public foreign handler type mosquitto_connect_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
   public foreign handler type mosquitto_log_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative) returns nothing
@@ -62,12 +66,12 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_loop_forever"
 
-
-  variable mMosquitto as optional Mosquitto
+  private variable mRunloopAction as MCRunloopActionRef
+  private variable mMosquitto as optional Mosquitto
 
 
   /**
-  Summary: Hanlder for testing PahoMQTT during development
+  Summary: Handler for testing during development
 
   Returns: nothing
   */
@@ -97,6 +101,12 @@ library community.livecode.trevordevore.mosquitto
 
         -- mosquitto_destroy(mMosquitto)
         -- mosquitto_lib_cleanup()
+
+        -- variable tCallback as MCRunloopActionCallback
+        variable tContext as optional Pointer
+        -- if MCBrowserLibraryGetRunloopCallback(tCallback, tContext) then
+        MCEngineAddRunloopAction(doRunLoop, tContext, mRunloopAction)
+        -- end if
       end if
     end unsafe
   end handler
@@ -104,6 +114,7 @@ library community.livecode.trevordevore.mosquitto
 
   public handler FinishMosquittoTest () returns nothing
     unsafe
+      MCEngineRemoveRunloopAction(mRunloopAction)
       mosquitto_disconnect(mMosquitto)
       mosquitto_destroy(mMosquitto)
       mosquitto_lib_cleanup()
@@ -111,11 +122,11 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
-  public handler MosquittoLoop() returns nothing
+  private handler doRunLoop(in pContext as optional Pointer) returns nothing
     unsafe
-      // Crash!
       mosquitto_loop(mMosquitto, -1, 1)
     end unsafe
+    log "doRunLoop"
   end handler
 
 
