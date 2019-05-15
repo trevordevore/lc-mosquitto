@@ -42,6 +42,7 @@ library community.livecode.trevordevore.mosquitto
         binds to "c:libmosquitto>mosquitto_disconnect"
 
   // Run loop
+  foreign handler MCHandlerGetFunctionPtr(in pHandler as any, out rFuncPtr as Pointer) returns CBool binds to "<builtin>"
   public foreign handler MCBrowserLibraryGetRunloopCallback(out rCallback as MCRunloopActionCallback, out rContext as optional Pointer) returns CBool binds to "<builtin>"
   public foreign handler type MCRunloopActionCallback(in pContext as optional Pointer) returns nothing
 
@@ -103,10 +104,13 @@ library community.livecode.trevordevore.mosquitto
         -- mosquitto_lib_cleanup()
 
         -- variable tCallback as MCRunloopActionCallback
+        variable tDoRunLoopFunc as Pointer
         variable tContext as optional Pointer
-        -- if MCBrowserLibraryGetRunloopCallback(tCallback, tContext) then
-        MCEngineAddRunloopAction(doRunLoop, tContext, mRunloopAction)
-        -- end if
+        if MCHandlerGetFunctionPtr(doRunLoop, tDoRunLoopFunc) then
+          MCEngineAddRunloopAction(tDoRunLoopFunc, tContext, mRunloopAction)
+        else
+          log "failed"
+        end if
       end if
     end unsafe
   end handler
