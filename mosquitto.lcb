@@ -43,8 +43,6 @@ library community.livecode.trevordevore.mosquitto
 
   // Run loop
   foreign handler MCHandlerGetFunctionPtr(in pHandler as any, out rFuncPtr as Pointer) returns CBool binds to "<builtin>"
-  public foreign handler MCBrowserLibraryGetRunloopCallback(out rCallback as MCRunloopActionCallback, out rContext as optional Pointer) returns CBool binds to "<builtin>"
-  public foreign handler type MCRunloopActionCallback(in pContext as optional Pointer) returns nothing
 
   // Callbacks
   public foreign handler type mosquitto_connect_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
@@ -98,29 +96,25 @@ library community.livecode.trevordevore.mosquitto
         put mosquitto_connect(mMosquitto, "test.mosquitto.org", 1883, 60) into tResult
         log ["tResult", tResult]
 
-        mosquitto_loop(mMosquitto, -1, 1)
-
-        -- mosquitto_destroy(mMosquitto)
-        -- mosquitto_lib_cleanup()
-
         variable tDoRunLoopFunc as MCRunloopActionCallback
         variable tContext as optional Pointer
         if MCHandlerGetFunctionPtr(doRunLoop, tDoRunLoopFunc) then
           MCEngineAddRunloopAction(tDoRunLoopFunc, tContext, mRunloopAction)
         else
-          log "failed"
+          log "Unable to set run loop"
         end if
       end if
     end unsafe
   end handler
 
 
-  public handler FinishMosquittoTest () returns nothing
+  public handler FinishMosquittoTest() returns nothing
     unsafe
       MCEngineRemoveRunloopAction(mRunloopAction)
       mosquitto_disconnect(mMosquitto)
       mosquitto_destroy(mMosquitto)
       mosquitto_lib_cleanup()
+      put nothing into mMosquitto
     end unsafe
   end handler
 
@@ -129,7 +123,6 @@ library community.livecode.trevordevore.mosquitto
     unsafe
       mosquitto_loop(mMosquitto, -1, 1)
     end unsafe
-    log "doRunLoop"
   end handler
 
 
