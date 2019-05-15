@@ -88,7 +88,7 @@ library community.livecode.trevordevore.mosquitto
 
       if mMosquitto is not nothing then
         mosquitto_log_callback_set(mMosquitto, LogCallback)
-        -- mosquitto_connect_callback_set(mMosquitto, ConnectCallback)
+        mosquitto_connect_callback_set(mMosquitto, ConnectCallback)
 
         put mosquitto_connect(mMosquitto, "test.mosquitto.org", 1883, 60) into tResult
         log ["tResult", tResult]
@@ -120,12 +120,12 @@ library community.livecode.trevordevore.mosquitto
 
 
   /* in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative */
-  handler LogCallback(in pMosquitto as Pointer, in pUserData as Pointer, in pLevel as Integer, in pString as String) returns nothing
-    log["LogCallback", pLevel]
+  private handler LogCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative) returns nothing
+    log["LogCallback", pLevel, pString]
   end handler
 
 
-  handler ConnectCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as Integer) returns nothing
+  private handler ConnectCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
     log ["ConnectCallback", pResult]
   end handler
 end library
