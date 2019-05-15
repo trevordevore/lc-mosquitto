@@ -8,7 +8,10 @@ library community.livecode.trevordevore.mosquitto
   metadata version is "0.0.1"
 
   public type Mosquitto is Pointer // to struct
-  public type Mosquitto_Message is Pointer // to struct
+  public foreign type MosquittoMessage binds to "MCAggregateTypeInfo:ErrEEa"
+
+  foreign handler MCStringCreateWithCString(in pString as Pointer, out rString as String) returns CBool binds to "<builtin>"
+  foreign handler MCDataCreateWithBytes(in pBytes as Pointer, in pByteCount as LCUInt, out rData as Data) returns CBool binds to "<builtin>"
 
   foreign handler mosquitto_lib_version (inout pMajor as CInt, inout pMinor as CInt, inout pRevision as CInt) \
         returns CInt \
@@ -20,7 +23,7 @@ library community.livecode.trevordevore.mosquitto
   foreign handler mosquitto_lib_cleanup () \
         returns nothing binds to "c:libmosquitto>mosquitto_lib_cleanup"
 
-  foreign handler mosquitto_new (in pId as optional ZStringNative, in pCleanSession as CBool, in pUserData as optional Pointer) \
+  foreign handler mosquitto_new (in pClientId as optional ZStringNative, in pCleanSession as CBool, in pUserData as optional Pointer) \
         returns Mosquitto \
         binds to "c:libmosquitto>mosquitto_new"
 
@@ -45,6 +48,14 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_unsubscribe"
 
+  foreign handler mosquitto_message_copy (in pDestinationMessage as MosquittoMessage, in pSourceMessage as MosquittoMessage) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_message_copy"
+
+  foreign handler mosquitto_message_free (in pMessage as Pointer) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_message_free"
+
 
   // Connect/disconnect
   foreign handler mosquitto_connect (in pMosquitto as Mosquitto, in pHost as ZStringNative, in pPort as CInt, in pKeepAlive as CInt) \
@@ -62,7 +73,7 @@ library community.livecode.trevordevore.mosquitto
   public foreign handler type mosquitto_connect_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pReturnCode as CInt) returns nothing
   public foreign handler type mosquitto_disconnect_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pReasonCode as CInt) returns nothing
   public foreign handler type mosquitto_publish_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
-  public foreign handler type mosquitto_message_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as Mosquitto_Message) returns nothing
+  public foreign handler type mosquitto_message_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as MosquittoMessage) returns nothing
   public foreign handler type mosquitto_subscribe_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt, in pQoSCount as CInt, inout pGrantedQoSArray as CInt) returns nothing
   public foreign handler type mosquitto_unsubscribe_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
   public foreign handler type mosquitto_log_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative) returns nothing
@@ -136,13 +147,13 @@ library community.livecode.trevordevore.mosquitto
 
   Returns: nothing
   */
-  public handler MosquittoInitialize(in pUseThreads as Boolean) returns nothing
+  public handler MosquittoInitialize(in pClientName as String, in pUseThreads as Boolean) returns nothing
     put pUseThreads into mUseThreads
 
     unsafe
       mosquitto_lib_init()
 
-      put mosquitto_new(nothing, true, nothing) into mMosquitto
+      put mosquitto_new(pClientName, true, nothing) into mMosquitto
 
       if mMosquitto is not nothing then
         mosquitto_log_callback_set(mMosquitto, LogCallback)
@@ -246,7 +257,54 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
-  private handler MessageCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as Mosquitto_Message) returns nothing
+  private handler MessageCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as MosquittoMessage) returns nothing
+    -- struct mosquitto_message{
+    --   int mid;
+    --   char *topic;
+    --   void *payload;
+    --   int payloadlen;
+    --   int qos;
+    --   bool retain;
+    -- };
+    variable tData as Data
+    variable tTopic as String
+    variable tMessage as MosquittoMessage
+    variable tResult as Integer
+
+    log pMessage
+
+    -- unsafe
+    --   put mosquitto_message_copy (tMessage, pMessage) into tResult
+    --   log "copy message:" && resolveErrorMessage(tResult)
+    -- end unsafe
+
+    -- unsafe
+    --   if tResult is 0 then
+    --   put mosquitto_message_free (tMessage) into tResult
+    --   log "free message:" && resolveErrorMessage(tResult)
+    --   end if
+    -- end unsafe
+
+    -- log pMessage
+
+    -- if element 2 of pMessage is not nothing then
+    --   log "what"
+    --   -- unsafe
+    --   --   if not MCStringCreateWithCString(element 2 of pMessage, tTopic) then
+    --   --     log "failed to convert const char * to String"
+    --   --   end if
+    --   -- end unsafe
+    -- end if
+    -- if element 3 of pMessage is not nothing then
+    --   unsafe
+    --     if not MCDataCreateWithBytes(element 3 of pMessage, element 4 of pMessage, tData) then
+    --       log "unable to create data"
+    --     else
+    --       log tData
+    --     end if
+    --   end unsafe
+    -- end if
+
     log ["MessageCallback"]
   end handler
 
