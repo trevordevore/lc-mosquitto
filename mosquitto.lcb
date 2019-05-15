@@ -93,7 +93,7 @@ library community.livecode.trevordevore.mosquitto
         put mosquitto_connect(mMosquitto, "test.mosquitto.org", 1883, 60) into tResult
         log ["tResult", tResult]
 
-        -- mosquitto_loop_forever(mMosquitto, -1, 1)
+        mosquitto_loop(mMosquitto, -1, 1)
 
         -- mosquitto_destroy(mMosquitto)
         -- mosquitto_lib_cleanup()
