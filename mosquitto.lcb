@@ -103,8 +103,7 @@ library community.livecode.trevordevore.mosquitto
         -- mosquitto_destroy(mMosquitto)
         -- mosquitto_lib_cleanup()
 
-        -- variable tCallback as MCRunloopActionCallback
-        variable tDoRunLoopFunc as Pointer
+        variable tDoRunLoopFunc as MCRunloopActionCallback
         variable tContext as optional Pointer
         if MCHandlerGetFunctionPtr(doRunLoop, tDoRunLoopFunc) then
           MCEngineAddRunloopAction(tDoRunLoopFunc, tContext, mRunloopAction)
