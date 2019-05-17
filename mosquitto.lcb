@@ -10,6 +10,17 @@ library community.livecode.trevordevore.mosquitto
   public type Mosquitto is Pointer // to struct
   public foreign type MosquittoMessage binds to "MCAggregateTypeInfo:ErrEEa"
 
+  foreign handler MyAggregateToPointer(inout pAggregate as MosquittoMessage, in pSize as UIntSize, out rPointer as Pointer) returns CBool binds to "c:MCMemoryAllocateCopy"
+  -- must free later with
+  foreign handler MCMemoryDelete(in pPointer as Pointer) returns nothing binds to "<builtin>"
+  -- use memcpy because MCMemoryCopy is inline
+  -- void *memcpy(void *str1, const void *str2, size_t n)
+  -- Aggregate pointer uses `out` when copying to
+  -- Aggregate pointer is `inout` when it is the source that is being copied from.
+  -- Pointer is always `in`
+  foreign handler PointerToMyAggregate(out rAggregate as MosquittoMessage, in pPointer as Pointer, in pSize as UIntSize) returns nothing binds to "c:memcpy"
+  -- foreign handler MyAggregateToOtherAggregate(out rDstAggregate as MyAggregate, inout pSrcAggregate as MyOtherAggregate, in pSize as UIntSize) returns nothing binds to "c:memcpy"
+
   foreign handler MCStringCreateWithCString(in pString as Pointer, out rString as String) returns CBool binds to "<builtin>"
   foreign handler MCDataCreateWithBytes(in pBytes as Pointer, in pByteCount as LCUInt, out rData as Data) returns CBool binds to "<builtin>"
 
