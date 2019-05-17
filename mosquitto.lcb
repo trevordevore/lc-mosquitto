@@ -293,6 +293,7 @@ library community.livecode.trevordevore.mosquitto
 
 
   private handler MessageCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as Pointer) returns nothing
+    -- ErrEEa
     -- struct mosquitto_message{
     --   int mid;
     --   char *topic;
@@ -307,9 +308,9 @@ library community.livecode.trevordevore.mosquitto
     variable tSize as Integer
 
     if the architecture ends with "64" then
-      put 4+8+8+4+4+1 into tSize
+      put 8+8+8+4+4+4 into tSize
     else
-      put 4+4+4+4+4+1 into tSize
+      put 4+4+4+4+4+4 into tSize
     end if
 
     unsafe
