@@ -163,6 +163,10 @@ library community.livecode.trevordevore.mosquitto
   public handler MosquittoInitialize(in pClientName as String, in pUseThreads as Boolean) returns nothing
     put pUseThreads into mUseThreads
 
+    if mMosquitto is not nothing then
+      return nothing
+    end if
+
     unsafe
       mosquitto_lib_init()
 
