@@ -7,6 +7,8 @@ library community.livecode.trevordevore.mosquitto
   metadata author is "Trevor DeVore"
   metadata version is "0.0.1"
 
+  constant kMCStringEncodingUTF8 is 4
+
   public type Mosquitto is Pointer // to struct
   public foreign type MosquittoMessage binds to "MCAggregateTypeInfo:ErrEEa"
 
@@ -18,11 +20,11 @@ library community.livecode.trevordevore.mosquitto
   -- Aggregate pointer uses `out` when copying to
   -- Aggregate pointer is `inout` when it is the source that is being copied from.
   -- Pointer is always `in`
-  foreign handler PointerToMyAggregate(out rAggregate as MosquittoMessage, in pPointer as Pointer, in pSize as UIntSize) returns nothing binds to "c:memcpy"
+  foreign handler PointerToMosquittoMessage(out rAggregate as MosquittoMessage, in pPointer as Pointer, in pSize as UIntSize) returns nothing binds to "c:memcpy"
   -- foreign handler MyAggregateToOtherAggregate(out rDstAggregate as MyAggregate, inout pSrcAggregate as MyOtherAggregate, in pSize as UIntSize) returns nothing binds to "c:memcpy"
 
   foreign handler MCStringCreateWithCString(in pString as Pointer, out rString as String) returns CBool binds to "<builtin>"
-  foreign handler MCDataCreateWithBytes(in pBytes as Pointer, in pByteCount as LCUInt, out rData as Data) returns CBool binds to "<builtin>"
+  foreign handler MCStringCreateWithBytes(in pBytes as Pointer, in pByteCount as LCUInt, in pEncoding as CUInt, in pIsExternalRep as CBool, out rString as String) returns CBool binds to "<builtin>"
 
   foreign handler mosquitto_lib_version (out pMajor as CInt, out pMinor as CInt, out pRevision as CInt) \
         returns CInt \
@@ -299,10 +301,9 @@ library community.livecode.trevordevore.mosquitto
     --   int qos;
     --   bool retain;
     -- };
-    -- variable tData as Data
-    -- variable tTopic as String
+    variable tPayload as String
+    variable tTopic as String
     variable tMessage as optional MosquittoMessage
-    -- variable tResult as Integer
     variable tSize as Integer
 
     if the architecture ends with "64" then
@@ -311,46 +312,34 @@ library community.livecode.trevordevore.mosquitto
       put 4+4+4+4+4+1 into tSize
     end if
 
-    -- unsafe
-    --   MyAggregateToMyOtherAggregate(pMessage, tSize, tMessage)
-    --   if tMessage is not nothing then
-    --     log tMessage
-    --   else
-    --     log "Unable to get message from pointer"
-    --   end if
-    -- end unsafe
+    unsafe
+      PointerToMosquittoMessage(tMessage, pMessage, tSize)
+      if tMessage is not nothing then
+        log tMessage
+      else
+        log "Unable to get message from pointer"
+      end if
+    end unsafe
 
-    -- unsafe
-    --   put mosquitto_message_copy (tMessage, pMessage) into tResult
-    --   log "copy message:" && resolveErrorMessage(tResult)
-    -- end unsafe
+    if element 2 of tMessage is not nothing then
+      unsafe
+        if not MCStringCreateWithCString(element 2 of tMessage, tTopic) then
+          log "failed to convert const char * to String"
+        else
+          log tTopic
+        end if
+      end unsafe
+    end if
 
-    -- unsafe
-    --   if tResult is 0 then
-    --   put mosquitto_message_free (tMessage) into tResult
-    --   log "free message:" && resolveErrorMessage(tResult)
-    --   end if
-    -- end unsafe
-
-    -- log pMessage
-
-    -- if element 2 of pMessage is not nothing then
-    --   log "what"
-    --   -- unsafe
-    --   --   if not MCStringCreateWithCString(element 2 of pMessage, tTopic) then
-    --   --     log "failed to convert const char * to String"
-    --   --   end if
-    --   -- end unsafe
-    -- end if
-    -- if element 3 of pMessage is not nothing then
-    --   unsafe
-    --     if not MCDataCreateWithBytes(element 3 of pMessage, element 4 of pMessage, tData) then
-    --       log "unable to create data"
-    --     else
-    --       log tData
-    --     end if
-    --   end unsafe
-    -- end if
+    if element 3 of tMessage is not nothing then
+      unsafe
+        if not MCStringCreateWithBytes(element 3 of tMessage, element 4 of tMessage, kMCStringEncodingUTF8, false, tPayload) then
+          log "unable to create data"
+        else
+          log tPayload
+        end if
+      end unsafe
+    end if
 
     log ["MessageCallback"]
   end handler
