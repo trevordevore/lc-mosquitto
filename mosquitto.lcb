@@ -44,7 +44,7 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_subscribe"
 
-  foreign handler mosquitto_unsubscribe (in pMosquitto as Mosquitto, inout rMessageId as optional CInt, in pUnsubPattern as ZStringNative, in pQoS as CInt) \
+  foreign handler mosquitto_unsubscribe (in pMosquitto as Mosquitto, inout rMessageId as optional CInt, in pUnsubPattern as ZStringNative) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_unsubscribe"
 
@@ -229,12 +229,12 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
-  public handler MosquittoUnsubscribe(in pTopic as String, in pQualityOfService as Integer) returns String
+  public handler MosquittoUnsubscribe(in pTopic as String) returns String
     variable messageId as Integer
     variable tResult as Integer
 
     unsafe
-      put mosquitto_unsubscribe (mMosquitto, messageId, pTopic, pQualityOfService) into tResult
+      put mosquitto_unsubscribe (mMosquitto, messageId, pTopic) into tResult
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
