@@ -353,8 +353,8 @@ library community.livecode.trevordevore.mosquitto
     else if pErrNumber is 10 then
       return "thread support is not enabled"
     else if pErrNumber is 14 then
-      // System call returned error. Use strerror_r() where available or FormatMessage() on Windows.
-      return "system error"
+      // System call returned error.
+      return the system error message
     else if pErrNumber is 18 then
       return "topic contains invalid UTF-8"
     end if
