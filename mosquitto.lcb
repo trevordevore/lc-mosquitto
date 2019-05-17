@@ -267,7 +267,7 @@ library community.livecode.trevordevore.mosquitto
 
   private handler doRunLoop(in pContext as optional Pointer) returns nothing
     unsafe
-      mosquitto_loop(mMosquitto, -1, 1)
+      mosquitto_loop(mMosquitto, 0, 1)
     end unsafe
   end handler
 
