@@ -170,7 +170,7 @@ library community.livecode.trevordevore.mosquitto
         mosquitto_log_callback_set(mMosquitto, LogCallback)
         mosquitto_connect_callback_set(mMosquitto, ConnectCallback)
         mosquitto_publish_callback_set(mMosquitto, PublishCallback)
-        -- mosquitto_message_callback_set(mMosquitto, MessageCallback)
+        mosquitto_message_callback_set(mMosquitto, MessageCallback)
         mosquitto_subscribe_callback_set(mMosquitto, SubscribeCallback)
         mosquitto_unsubscribe_callback_set(mMosquitto, UnsubscribeCallback)
 
@@ -290,7 +290,7 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
-  private handler MessageCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as MosquittoMessage) returns nothing
+  private handler MessageCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as Pointer) returns nothing
     -- struct mosquitto_message{
     --   int mid;
     --   char *topic;
