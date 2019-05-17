@@ -304,7 +304,7 @@ library community.livecode.trevordevore.mosquitto
     -- };
     variable tPayload as String
     variable tTopic as String
-    variable tMessage as optional MosquittoMessage
+    variable tMessage as MosquittoMessage
     variable tSize as Integer
 
     if the architecture ends with "64" then
