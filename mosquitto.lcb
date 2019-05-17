@@ -280,6 +280,16 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
+  private handler SubscribeCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt, in pQoSCount as CInt, in pGrantedQoSArray as optional Pointer) returns nothing
+    log ["SubscribeCallback", pMessageId]
+  end handler
+
+
+  private handler UnsubscribeCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
+    log ["UnsubscribeCallback", pMessageId]
+  end handler
+
+
   private handler MessageCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as MosquittoMessage) returns nothing
     -- struct mosquitto_message{
     --   int mid;
@@ -289,12 +299,26 @@ library community.livecode.trevordevore.mosquitto
     --   int qos;
     --   bool retain;
     -- };
-    variable tData as Data
-    variable tTopic as String
-    variable tMessage as MosquittoMessage
-    variable tResult as Integer
+    -- variable tData as Data
+    -- variable tTopic as String
+    variable tMessage as optional MosquittoMessage
+    -- variable tResult as Integer
+    variable tSize as Integer
 
-    log pMessage
+    if the architecture ends with "64" then
+      put 4+8+8+4+4+1 into tSize
+    else
+      put 4+4+4+4+4+1 into tSize
+    end if
+
+    -- unsafe
+    --   MyAggregateToMyOtherAggregate(pMessage, tSize, tMessage)
+    --   if tMessage is not nothing then
+    --     log tMessage
+    --   else
+    --     log "Unable to get message from pointer"
+    --   end if
+    -- end unsafe
 
     -- unsafe
     --   put mosquitto_message_copy (tMessage, pMessage) into tResult
@@ -329,16 +353,6 @@ library community.livecode.trevordevore.mosquitto
     -- end if
 
     log ["MessageCallback"]
-  end handler
-
-
-  private handler SubscribeCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt, in pQoSCount as CInt, in pGrantedQoSArray as optional Pointer) returns nothing
-    log ["SubscribeCallback", pMessageId]
-  end handler
-
-
-  private handler UnsubscribeCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
-    log ["UnsubscribeCallback", pMessageId]
   end handler
 
 
