@@ -296,7 +296,7 @@ library community.livecode.trevordevore.mosquitto
 
 
   private handler ConnectCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
-    log ["ConnectCallback", pResult]
+    log ["ConnectCallback", resolveErrorMessage(pResult)]
   end handler
 
 
