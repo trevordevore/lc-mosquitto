@@ -7,6 +7,7 @@ library community.livecode.trevordevore.mosquitto
   metadata author is "Trevor DeVore"
   metadata version is "0.0.1"
 
+  constant kDebugLog is false
   constant kMCStringEncodingUTF8 is 4
 
   public type Mosquitto is Pointer // to struct
@@ -133,10 +134,19 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_loop_stop"
 
+
   private variable mRunloopAction as MCRunloopActionRef
   private variable mMosquitto as optional Mosquitto
   private variable mUseThreads as Boolean
+  private variable mEnableLogging as Boolean
+  private variable mCallbackObject as optional ScriptObject
 
+
+  /**
+  Summary: Returns the libMosquitto library version
+
+  Returns: Version number in x.y.z format
+  */
   public handler MosquittoVersion() returns String
     variable tMajor as Integer
     variable tMinor as Integer
@@ -151,19 +161,30 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
+  public handler MosquittoSetCallbackTarget(in pObjectRef as String) returns nothing
+    if pObjectRef is not empty then
+      resolve script object pObjectRef into mCallbackObject
+    else
+      put nothing into mCallbackObject
+    end if
+  end handler
+
+
   /**
   Summary: Handler for testing during development
 
-  Returns: nothing
+  Returns: Error message
   */
-  public handler MosquittoInitialize(in pClientName as String, in pUseThreads as Boolean) returns nothing
-    put pUseThreads into mUseThreads
+  public handler MosquittoInitialize(in pClientName as String) returns String
+    variable tError as String
 
     if mMosquitto is not nothing then
-      return nothing
+      return ""
     end if
 
     unsafe
+      put false into mEnableLogging
+
       mosquitto_lib_init()
 
       put mosquitto_new(pClientName, true, nothing) into mMosquitto
@@ -178,18 +199,21 @@ library community.livecode.trevordevore.mosquitto
 
         if mUseThreads then
           mosquitto_loop_start(mMosquitto)
-          log "using threads"
         else
           variable tDoRunLoopFunc as MCRunloopActionCallback
           variable tContext as optional Pointer
           if MCHandlerGetFunctionPtr(doRunLoop, tDoRunLoopFunc) then
             MCEngineAddRunloopAction(tDoRunLoopFunc, tContext, mRunloopAction)
           else
-            log "Unable to set run loop"
+            put "Unable to set run loop" into tError
           end if
         end if
+      else
+        put "failed to initialize mosquitto" into tError
       end if
     end unsafe
+
+    return tError
   end handler
 
 
@@ -229,7 +253,21 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
-  public handler MosquittoPublish(in pTopic as String, in pQualityOfService as Integer) returns String
+  public handler MosquittoEnableLogging(in pEnable as Boolean) returns nothing
+    put pEnable into mEnableLogging
+  end handler
+
+
+  /**
+  Summary: Publishes a message
+
+  Parameters:
+  pTopic: UTF-8 String
+  pMessage: UTF-8 String
+
+  Returns: Error message
+  */
+  public handler MosquittoPublish(in pTopic as String, in pMessage as String, in pQualityOfService as Integer) returns String
     variable messageId as Integer
     variable tResult as Integer
 
@@ -237,12 +275,18 @@ library community.livecode.trevordevore.mosquitto
     -- 1: The broker/client will deliver the message at least once, with confirmation required.
     -- 2: The broker/client will deliver the message exactly once by using a four step handshake.
     unsafe
+      // TODO: Convert pMessage to Data pointer and use MCDataGetBytePtr to get pointer to bytes
       put mosquitto_publish (mMosquitto, messageId, pTopic, 0, nothing, pQualityOfService, false) into tResult
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
 
 
+  /**
+  Summary: Subscribe to a topic.
+
+  Returns: Error message
+  */
   public handler MosquittoSubscribe(in pTopic as String, in pQualityOfService as Integer) returns String
     variable messageId as Integer
     variable tResult as Integer
@@ -254,6 +298,11 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
+  /**
+  Summary: Unsubscribe from a topic.
+
+  Returns: Error message
+  */
   public handler MosquittoUnsubscribe(in pTopic as String) returns String
     variable messageId as Integer
     variable tResult as Integer
@@ -265,6 +314,11 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
+  /**
+  Summary: Called by LiveCode during the main event loop.
+
+  Returns: nothing
+  */
   private handler doRunLoop(in pContext as optional Pointer) returns nothing
     unsafe
       mosquitto_loop(mMosquitto, 0, 1)
@@ -273,27 +327,26 @@ library community.livecode.trevordevore.mosquitto
 
 
   private handler ConnectCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pResult as CInt) returns nothing
-    log ["ConnectCallback", resolveErrorMessage(pResult)]
+    _PostMessage("MosquittotConnectCallback", [resolveErrorMessage(pResult)])
   end handler
 
 
   private handler PublishCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
-    log ["PublishCallback", pMessageId]
+    _PostMessage("MosquittotPublishCallback", [pMessageId])
   end handler
 
 
   private handler SubscribeCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt, in pQoSCount as CInt, in pGrantedQoSArray as optional Pointer) returns nothing
-    log ["SubscribeCallback", pMessageId]
+    _PostMessage("MosquittotSubscribeCallback", [pMessageId])
   end handler
 
 
   private handler UnsubscribeCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
-    log ["UnsubscribeCallback", pMessageId]
+    _PostMessage("MosquittotUnsubscribeCallback", [pMessageId])
   end handler
 
 
   private handler MessageCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessage as Pointer) returns nothing
-    -- ErrEEa
     -- struct mosquitto_message{
     --   int mid;
     --   char *topic;
@@ -302,6 +355,7 @@ library community.livecode.trevordevore.mosquitto
     --   int qos;
     --   bool retain;
     -- };
+    variable tError as String
     variable tPayload as String
     variable tTopic as String
     variable tMessage as MosquittoMessage
@@ -319,43 +373,60 @@ library community.livecode.trevordevore.mosquitto
       else
         PointerToMosquittoMessage(tMessage, pMessage, tSize)
       end if
-      if tMessage is not nothing then
-        log tMessage
-      else
-        log "Unable to get message from pointer"
+
+      if tMessage is nothing then
+        put "Unable to get message from pointer" into tError
       end if
     end unsafe
 
-    if element 2 of tMessage is not nothing then
-      unsafe
-        if not MCStringCreateWithCString(element 2 of tMessage, tTopic) then
-          log "failed to convert const char * to String"
-        else
-          log tTopic
-        end if
-      end unsafe
+    if tMessage is not nothing then
+      if element 2 of tMessage is not nothing then
+        unsafe
+          if not MCStringCreateWithCString(element 2 of tMessage, tTopic) then
+            put "failed to convert const char * to String" into tError
+          end if
+        end unsafe
+      end if
+
+      if element 3 of tMessage is not nothing then
+        unsafe
+          if not MCStringCreateWithBytes(element 3 of tMessage, element 4 of tMessage, kMCStringEncodingUTF8, false, tPayload) then
+            put "unable to extract payload from message data" into tError
+          end if
+        end unsafe
+      end if
     end if
 
-    if element 3 of tMessage is not nothing then
-      unsafe
-        if not MCStringCreateWithBytes(element 3 of tMessage, element 4 of tMessage, kMCStringEncodingUTF8, false, tPayload) then
-          log "unable to create data"
-        else
-          log tPayload
-        end if
-      end unsafe
-    end if
-
-    log ["MessageCallback"]
+    _PostMessage("MosquittotMessageCallback", [tTopic, tPayload])
   end handler
 
 
-  /* in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as ZStringNative */
   private handler LogCallback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as optional ZStringNative) returns nothing
-    log["LogCallback", pLevel, pString]
+    if mEnableLogging then
+      _PostMessage("MosquittoLogCallback", [pLevel, pString])
+    end if
   end handler
 
 
+  private handler _PostMessage(in pMessage as String, in pArgs as List) returns nothing
+    if mCallbackObject is not nothing then
+      post pMessage to mCallbackObject with pArgs
+    else
+      post pMessage with pArgs
+    end if
+
+    if kDebugLog then
+      push pMessage onto front of pArgs
+      log pArgs
+    end if
+  end handler
+
+
+  /**
+  Summary: Converts a Mosquitto error number to a string
+
+  Returns: nothing
+  */
   private handler resolveErrorMessage(in pErrNumber as Integer) returns String
     if pErrNumber is 0 then
       return ""
