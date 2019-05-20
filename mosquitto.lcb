@@ -21,8 +21,11 @@ library community.livecode.trevordevore.mosquitto
   -- All Windows API calls need `!stdcall`
   foreign handler PointerToMosquittoMessageWin(out rAggregate as MosquittoMessage, in pPointer as Pointer, in pSize as UIntSize) returns nothing binds to "kernel32>RtlMoveMemory!stdcall"
 
+  foreign handler MCStringEncode(in pString as String, in pEncoding as CUInt, in pIsExternalRep as CBool, out rUTF8String as Data) returns CBool binds to "<builtin>"
   foreign handler MCStringCreateWithCString(in pString as Pointer, out rString as String) returns CBool binds to "<builtin>"
   foreign handler MCStringCreateWithBytes(in pBytes as Pointer, in pByteCount as LCUInt, in pEncoding as CUInt, in pIsExternalRep as CBool, out rString as String) returns CBool binds to "<builtin>"
+  foreign handler MCDataConvertStringToData(in pString as String, out rData as Data) returns CBool binds to "<builtin>"
+  foreign handler MCDataGetBytePtr(in pData as Data) returns Pointer binds to "<builtin>"
 
   foreign handler mosquitto_lib_version (out pMajor as CInt, out pMinor as CInt, out pRevision as CInt) \
         returns CInt \
@@ -46,16 +49,16 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_reinitialise"
 
-  foreign handler mosquitto_publish (in pMosquitto as Mosquitto, inout rMessageId as optional CInt, in pTopic as ZStringNative, \
+  foreign handler mosquitto_publish (in pMosquitto as Mosquitto, inout rMessageId as optional CInt, in pTopic as Pointer, \
         in pPayloadLength as CInt, in pPayload as optional Pointer, in pQoS as CInt, in pRetain as CBool) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_publish"
 
-  foreign handler mosquitto_subscribe (in pMosquitto as Mosquitto, inout rMessageId as CInt, in pSubPattern as ZStringNative, in pQoS as CInt) \
+  foreign handler mosquitto_subscribe (in pMosquitto as Mosquitto, inout rMessageId as CInt, in pSubPattern as Pointer, in pQoS as CInt) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_subscribe"
 
-  foreign handler mosquitto_unsubscribe (in pMosquitto as Mosquitto, inout rMessageId as CInt, in pUnsubPattern as ZStringNative) \
+  foreign handler mosquitto_unsubscribe (in pMosquitto as Mosquitto, inout rMessageId as CInt, in pUnsubPattern as Pointer) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_unsubscribe"
 
@@ -282,6 +285,10 @@ library community.livecode.trevordevore.mosquitto
   Returns: Error message
   */
   public handler MosquittoPublish(in pTopic as String, in pMessage as String, in pQualityOfService as Integer) returns String
+    variable tTopicData as Data
+    variable tTopicPtr as optional Pointer
+    variable tMsgData as Data
+    variable tMsgPtr as optional Pointer
     variable messageId as Integer
     variable tResult as Integer
 
@@ -289,8 +296,15 @@ library community.livecode.trevordevore.mosquitto
     -- 1: The broker/client will deliver the message at least once, with confirmation required.
     -- 2: The broker/client will deliver the message exactly once by using a four step handshake.
     unsafe
-      // TODO: Convert pMessage to Data pointer and use MCDataGetBytePtr to get pointer to bytes
-      put mosquitto_publish (mMosquitto, messageId, pTopic, 0, nothing, pQualityOfService, false) into tResult
+      if MCStringEncode(pTopic, kMCStringEncodingUTF8, false, tTopicData) then
+        if MCStringEncode(pMessage, kMCStringEncodingUTF8, false, tMsgData) then
+          put MCDataGetBytePtr(tTopicData) into tTopicPtr
+          put MCDataGetBytePtr(tMsgData) into tMsgPtr
+          if tMsgPtr is not nothing then
+            put mosquitto_publish (mMosquitto, messageId, tTopicPtr, the number of bytes in tMsgData, tMsgPtr, pQualityOfService, false) into tResult
+          end if
+        end if
+      end if
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
@@ -302,11 +316,16 @@ library community.livecode.trevordevore.mosquitto
   Returns: Error message
   */
   public handler MosquittoSubscribe(in pTopic as String, in pQualityOfService as Integer) returns String
+    variable tTopicData as Data
+    variable tTopicPtr as optional Pointer
     variable messageId as Integer
     variable tResult as Integer
 
     unsafe
-      put mosquitto_subscribe (mMosquitto, messageId, pTopic, pQualityOfService) into tResult
+      if MCStringEncode(pTopic, kMCStringEncodingUTF8, false, tTopicData) then
+        put MCDataGetBytePtr(tTopicData) into tTopicPtr
+        put mosquitto_subscribe (mMosquitto, messageId, tTopicPtr, pQualityOfService) into tResult
+      end if
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
@@ -318,11 +337,16 @@ library community.livecode.trevordevore.mosquitto
   Returns: Error message
   */
   public handler MosquittoUnsubscribe(in pTopic as String) returns String
+    variable tTopicPtr as Pointer
+    variable tTopicData as Data
     variable messageId as Integer
     variable tResult as Integer
 
     unsafe
-      put mosquitto_unsubscribe (mMosquitto, messageId, pTopic) into tResult
+      if MCStringEncode(pTopic, kMCStringEncodingUTF8, false, tTopicData) then
+        put MCDataGetBytePtr(tTopicData) into tTopicPtr
+        put mosquitto_unsubscribe (mMosquitto, messageId, tTopicPtr) into tResult
+      end if
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
