@@ -73,6 +73,10 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_connect"
 
+  foreign handler mosquitto_reconnect (in pMosquitto as Mosquitto) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_reconnect"
+
   foreign handler mosquitto_disconnect (in pMosquitto as Mosquitto) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_disconnect"
@@ -238,6 +242,16 @@ library community.livecode.trevordevore.mosquitto
 
     unsafe
       put mosquitto_connect (mMosquitto, pHost, pPort, pKeepAlive) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
+  public handler MosquittoReconnect() returns String
+    variable tResult as Integer
+
+    unsafe
+      put mosquitto_reconnect(mMosquitto) into tResult
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
