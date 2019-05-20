@@ -438,6 +438,14 @@ library community.livecode.trevordevore.mosquitto
       return "the input parameters were invalid"
     else if pErrNumber is 4 then
       return "the client isn't connected to the broker"
+    else if pErrNumber is 5 then
+      return "connection refused"
+    else if pErrNumber is 6 then
+      return "not found"
+    else if pErrNumber is 7 then
+      return "connection lost"
+    else if pErrNumber is 8 then
+      return "TLS error"
     else if pErrNumber is 9 then
       return "payload length is too large"
     else if pErrNumber is 10 then
@@ -446,7 +454,7 @@ library community.livecode.trevordevore.mosquitto
       // System call returned error.
       return the system error message
     else if pErrNumber is 18 then
-      return "topic contains invalid UTF-8"
+      return "invalid UTF-8"
     end if
   end handler
 end library
