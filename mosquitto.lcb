@@ -184,9 +184,14 @@ library community.livecode.trevordevore.mosquitto
   */
   public handler MosquittoInitialize(in pClientName as String) returns String
     variable tError as String
+    variable tClientId as optional String
 
     if mMosquitto is not nothing then
       return ""
+    end if
+
+    if pClientName is not "" then
+      put pClientName into tClientId
     end if
 
     unsafe
@@ -194,7 +199,7 @@ library community.livecode.trevordevore.mosquitto
 
       mosquitto_lib_init()
 
-      put mosquitto_new(pClientName, true, nothing) into mMosquitto
+      put mosquitto_new(tClientId, true, nothing) into mMosquitto
 
       if mMosquitto is not nothing then
         mosquitto_log_callback_set(mMosquitto, LogCallback)
