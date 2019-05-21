@@ -10,7 +10,7 @@ library community.livecode.trevordevore.mosquitto
   constant kDebugLog is false
   constant kMCStringEncodingUTF8 is 4
 
-  public type Mosquitto is Pointer // to struct
+  public type Mosquitto_ptr is Pointer // to struct
   public foreign type MosquittoMessage binds to "MCAggregateTypeInfo:ErrEEa"
 
   -- void *memcpy(void *str1, const void *str2, size_t n)
@@ -38,27 +38,27 @@ library community.livecode.trevordevore.mosquitto
         returns nothing binds to "c:libmosquitto>mosquitto_lib_cleanup"
 
   foreign handler mosquitto_new (in pClientId as optional ZStringNative, in pCleanSession as CBool, in pUserData as optional Pointer) \
-        returns Mosquitto \
+        returns Mosquitto_ptr \
         binds to "c:libmosquitto>mosquitto_new"
 
-  foreign handler mosquitto_destroy (in pMosquitto as Mosquitto) \
+  foreign handler mosquitto_destroy (in pMosquitto as Mosquitto_ptr) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_destroy"
 
-  foreign handler mosquitto_reinitialise (in pMosquitto as Mosquitto, in pId as optional ZStringNative, in pCleanSession as CBool, in pUserData as optional Pointer) \
+  foreign handler mosquitto_reinitialise (in pMosquitto as Mosquitto_ptr, in pId as optional ZStringNative, in pCleanSession as CBool, in pUserData as optional Pointer) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_reinitialise"
 
-  foreign handler mosquitto_publish (in pMosquitto as Mosquitto, inout rMessageId as optional CInt, in pTopic as Pointer, \
+  foreign handler mosquitto_publish (in pMosquitto as Mosquitto_ptr, inout rMessageId as optional CInt, in pTopic as Pointer, \
         in pPayloadLength as CInt, in pPayload as optional Pointer, in pQoS as CInt, in pRetain as CBool) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_publish"
 
-  foreign handler mosquitto_subscribe (in pMosquitto as Mosquitto, inout rMessageId as CInt, in pSubPattern as Pointer, in pQoS as CInt) \
+  foreign handler mosquitto_subscribe (in pMosquitto as Mosquitto_ptr, inout rMessageId as CInt, in pSubPattern as Pointer, in pQoS as CInt) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_subscribe"
 
-  foreign handler mosquitto_unsubscribe (in pMosquitto as Mosquitto, inout rMessageId as CInt, in pUnsubPattern as Pointer) \
+  foreign handler mosquitto_unsubscribe (in pMosquitto as Mosquitto_ptr, inout rMessageId as CInt, in pUnsubPattern as Pointer) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_unsubscribe"
 
@@ -72,15 +72,15 @@ library community.livecode.trevordevore.mosquitto
 
 
   // Connect/disconnect
-  foreign handler mosquitto_connect (in pMosquitto as Mosquitto, in pHost as ZStringNative, in pPort as CInt, in pKeepAlive as CInt) \
+  foreign handler mosquitto_connect (in pMosquitto as Mosquitto_ptr, in pHost as ZStringNative, in pPort as CInt, in pKeepAlive as CInt) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_connect"
 
-  foreign handler mosquitto_reconnect (in pMosquitto as Mosquitto) \
+  foreign handler mosquitto_reconnect (in pMosquitto as Mosquitto_ptr) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_reconnect"
 
-  foreign handler mosquitto_disconnect (in pMosquitto as Mosquitto) \
+  foreign handler mosquitto_disconnect (in pMosquitto as Mosquitto_ptr) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_disconnect"
 
@@ -96,54 +96,54 @@ library community.livecode.trevordevore.mosquitto
   public foreign handler type mosquitto_unsubscribe_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pMessageId as CInt) returns nothing
   public foreign handler type mosquitto_log_callback(in pMosquitto as Pointer, in pUserData as optional Pointer, in pLevel as CInt, in pString as optional ZStringNative) returns nothing
 
-  foreign handler mosquitto_connect_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_connect_callback) \
+  foreign handler mosquitto_connect_callback_set (in pMosquitto as Mosquitto_ptr, in pHandler as mosquitto_connect_callback) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_connect_callback_set"
 
-  foreign handler mosquitto_disconnect_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_disconnect_callback) \
+  foreign handler mosquitto_disconnect_callback_set (in pMosquitto as Mosquitto_ptr, in pHandler as mosquitto_disconnect_callback) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_disconnect_callback_set"
 
-  foreign handler mosquitto_publish_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_publish_callback) \
+  foreign handler mosquitto_publish_callback_set (in pMosquitto as Mosquitto_ptr, in pHandler as mosquitto_publish_callback) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_publish_callback_set"
 
-  foreign handler mosquitto_message_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_message_callback) \
+  foreign handler mosquitto_message_callback_set (in pMosquitto as Mosquitto_ptr, in pHandler as mosquitto_message_callback) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_message_callback_set"
 
-  foreign handler mosquitto_subscribe_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_subscribe_callback) \
+  foreign handler mosquitto_subscribe_callback_set (in pMosquitto as Mosquitto_ptr, in pHandler as mosquitto_subscribe_callback) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_subscribe_callback_set"
 
-  foreign handler mosquitto_unsubscribe_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_unsubscribe_callback) \
+  foreign handler mosquitto_unsubscribe_callback_set (in pMosquitto as Mosquitto_ptr, in pHandler as mosquitto_unsubscribe_callback) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_unsubscribe_callback_set"
 
-  foreign handler mosquitto_log_callback_set (in pMosquitto as Mosquitto, in pHandler as mosquitto_log_callback) \
+  foreign handler mosquitto_log_callback_set (in pMosquitto as Mosquitto_ptr, in pHandler as mosquitto_log_callback) \
         returns nothing \
         binds to "c:libmosquitto>mosquitto_log_callback_set"
 
   // Netowrk loop
-  foreign handler mosquitto_loop (in pMosquitto as Mosquitto, in pTimeout as CInt, in pMaxPackets as CInt) \
+  foreign handler mosquitto_loop (in pMosquitto as Mosquitto_ptr, in pTimeout as CInt, in pMaxPackets as CInt) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_loop"
 
-  foreign handler mosquitto_loop_forever (in pMosquitto as Mosquitto, in pTimeout as CInt, in pMaxPackets as CInt) \
+  foreign handler mosquitto_loop_forever (in pMosquitto as Mosquitto_ptr, in pTimeout as CInt, in pMaxPackets as CInt) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_loop_forever"
 
-  foreign handler mosquitto_loop_start (in pMosquitto as Mosquitto) \
+  foreign handler mosquitto_loop_start (in pMosquitto as Mosquitto_ptr) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_loop_start"
 
-  foreign handler mosquitto_loop_stop (in pMosquitto as Mosquitto, in pForce as CBool) \
+  foreign handler mosquitto_loop_stop (in pMosquitto as Mosquitto_ptr, in pForce as CBool) \
         returns CInt \
         binds to "c:libmosquitto>mosquitto_loop_stop"
 
 
   private variable mRunloopAction as MCRunloopActionRef
-  private variable mMosquitto as optional Mosquitto
+  private variable mMosquitto as optional Mosquitto_ptr
   private variable mUseThreads as Boolean
   private variable mEnableLogging as Boolean
   private variable mCallbackObject as optional ScriptObject
