@@ -25,7 +25,7 @@ library community.livecode.trevordevore.mosquitto
   foreign handler MCStringCreateWithCString(in pString as Pointer, out rString as String) returns CBool binds to "<builtin>"
   foreign handler MCStringCreateWithBytes(in pBytes as Pointer, in pByteCount as LCUInt, in pEncoding as CUInt, in pIsExternalRep as CBool, out rString as String) returns CBool binds to "<builtin>"
   foreign handler MCDataConvertStringToData(in pString as String, out rData as Data) returns CBool binds to "<builtin>"
-  foreign handler MCDataGetBytePtr(in pData as Data) returns Pointer binds to "<builtin>"
+  foreign handler MCDataGetBytePtr(in pData as Data) returns optional Pointer binds to "<builtin>"
 
   foreign handler mosquitto_lib_version (out pMajor as CInt, out pMinor as CInt, out pRevision as CInt) \
         returns CInt \
