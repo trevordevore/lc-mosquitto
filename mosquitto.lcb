@@ -18,10 +18,7 @@ library community.livecode.trevordevore.mosquitto
   -- Aggregate pointer is `inout` when it is the source that is being copied from.
   -- Pointer is always `in`
   foreign handler PointerToMosquittoMessage(out rAggregate as MosquittoMessage, in pPointer as Pointer, in pSize as UIntSize) returns nothing binds to "c:memcpy"
-  -- All Windows 32-bit API calls need `!stdcall`
-  -- Windows 64-bit fails with the !stdcall definition as of LC 9.6 dp-4.
-  foreign handler PointerToMosquittoMessageWin(out rAggregate as MosquittoMessage, in pPointer as Pointer, in pSize as UIntSize) returns nothing binds to "kernel32>RtlMoveMemory!stdcall"
-  foreign handler PointerToMosquittoMessageWin64(out rAggregate as MosquittoMessage, in pPointer as Pointer, in pSize as UIntSize) returns nothing binds to "kernel32>RtlMoveMemory"
+  foreign handler PointerToMosquittoMessageWin(out rAggregate as MosquittoMessage, in pPointer as Pointer, in pSize as UIntSize) returns nothing binds to "msvcrt>memcpy"
 
   foreign handler MCStringEncode(in pString as String, in pEncoding as CUInt, in pIsExternalRep as CBool, out rUTF8String as Data) returns CBool binds to "<builtin>"
   foreign handler MCStringCreateWithCString(in pString as Pointer, out rString as String) returns CBool binds to "<builtin>"
@@ -414,11 +411,7 @@ library community.livecode.trevordevore.mosquitto
 
     unsafe
       if the operating system is "windows" then
-        if the architecture ends with "64" then
-          PointerToMosquittoMessageWin64(tMessage, pMessage, tSize)
-        else
-          PointerToMosquittoMessageWin(tMessage, pMessage, tSize)
-        end if
+        PointerToMosquittoMessageWin(tMessage, pMessage, tSize)
       else
         PointerToMosquittoMessage(tMessage, pMessage, tSize)
       end if
