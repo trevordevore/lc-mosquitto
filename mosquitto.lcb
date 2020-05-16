@@ -534,11 +534,41 @@ library community.livecode.trevordevore.mosquitto
       return "payload length is too large"
     else if pErrNumber is 10 then
       return "thread support is not enabled"
+    else if pErrNumber is 11 then
+      return "authorization error"
+    else if pErrNumber is 12 then
+      return "ACL denied"
+    else if pErrNumber is 13 then
+      return "unknown error"
     else if pErrNumber is 14 then
       // System call returned error.
       return the system error message
+    else if pErrNumber is 15 then
+      return "EAI lookup error"
+    else if pErrNumber is 16 then
+      return "proxy error"
+    else if pErrNumber is 17 then
+      return "plugin defer error"
     else if pErrNumber is 18 then
       return "invalid UTF-8"
+    else if pErrNumber is 19 then
+      return "keep alive error"
+    else if pErrNumber is 20 then
+      return "lookup error"
+    else if pErrNumber is 21 then
+      return "malformed packet"
+    else if pErrNumber is 22 then
+      return "duplicate property"
+    else if pErrNumber is 23 then
+      return "TLS handshake error"
+    else if pErrNumber is 24 then
+      return "QOS not supported"
+    else if pErrNumber is 25 then
+      return "oversize packet error"
+    else if pErrNumber is 26 then
+      return "OCSP error"
+    else
+      return pErrNumber formatted as string
     end if
   end handler
 end library
