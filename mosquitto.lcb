@@ -74,6 +74,11 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_username_pw_set"
 
+  foreign handler mosquitto_tls_set (in pMosquitto as Mosquitto_ptr, in pCaFile as optional ZStringNative, in pCaPath as optional ZStringNative, \
+        in pCertFile as optional ZStringNative, in pKeyFile as optional ZStringNative, in pPwCAllback as optional Pointer) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_tls_set"
+
   // Connect/disconnect
   foreign handler mosquitto_connect (in pMosquitto as Mosquitto_ptr, in pHost as ZStringNative, in pPort as CInt, in pKeepAlive as CInt) \
         returns CInt \
@@ -253,6 +258,29 @@ library community.livecode.trevordevore.mosquitto
 
     unsafe
       put mosquitto_username_pw_set(mMosquitto, pUsername, pPassword) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
+  public handler MosquittoTLSSet(in pCaFile as optional String, in pCaPath as optional String, in pCertFile as optional String, in pKeyFile as optional String) returns String
+    variable tResult as Integer
+
+    if pCaFile is "" then
+      put nothing into pCaFile
+    end if
+    if pCaPath is "" then
+      put nothing into pCaPath
+    end if
+    if pCertFile is "" then
+      put nothing into pCertFile
+    end if
+    if pKeyFile is "" then
+      put nothing into pKeyFile
+    end if
+
+    unsafe
+      put mosquitto_tls_set(mMosquitto, pCaFile, pCaPath, pCertFile, pKeyFile, nothing) into tResult
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
