@@ -69,6 +69,10 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_message_free"
 
+  // Authorization
+  foreign handler mosquitto_username_pw_set (in pMosquitto as Mosquitto_ptr, in pUsername as ZStringNative, in pPassword as ZStringNative) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_username_pw_set"
 
   // Connect/disconnect
   foreign handler mosquitto_connect (in pMosquitto as Mosquitto_ptr, in pHost as ZStringNative, in pPort as CInt, in pKeepAlive as CInt) \
@@ -244,11 +248,21 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
+  public handler MosquittoSetUsernamePassword(in pUsername as String, in pPassword as String) returns String
+    variable tResult as Integer
+
+    unsafe
+      put mosquitto_username_pw_set(mMosquitto, pUsername, pPassword) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
   public handler MosquittoConnect(in pHost as String, in pPort as Integer, in pKeepAlive as Integer) returns String
     variable tResult as Integer
 
     unsafe
-      put mosquitto_connect (mMosquitto, pHost, pPort, pKeepAlive) into tResult
+      put mosquitto_connect(mMosquitto, pHost, pPort, pKeepAlive) into tResult
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
