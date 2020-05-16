@@ -69,6 +69,15 @@ library community.livecode.trevordevore.mosquitto
         returns CInt \
         binds to "c:libmosquitto>mosquitto_message_free"
 
+  // Authorization
+  foreign handler mosquitto_username_pw_set (in pMosquitto as Mosquitto_ptr, in pUsername as ZStringNative, in pPassword as ZStringNative) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_username_pw_set"
+
+  foreign handler mosquitto_tls_set (in pMosquitto as Mosquitto_ptr, in pCaFile as optional ZStringNative, in pCaPath as optional ZStringNative, \
+        in pCertFile as optional ZStringNative, in pKeyFile as optional ZStringNative, in pPwCAllback as optional Pointer) \
+        returns CInt \
+        binds to "c:libmosquitto>mosquitto_tls_set"
 
   // Connect/disconnect
   foreign handler mosquitto_connect (in pMosquitto as Mosquitto_ptr, in pHost as ZStringNative, in pPort as CInt, in pKeepAlive as CInt) \
@@ -244,11 +253,44 @@ library community.livecode.trevordevore.mosquitto
   end handler
 
 
+  public handler MosquittoSetUsernamePassword(in pUsername as String, in pPassword as String) returns String
+    variable tResult as Integer
+
+    unsafe
+      put mosquitto_username_pw_set(mMosquitto, pUsername, pPassword) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
+  public handler MosquittoTLSSet(in pCaFile as optional String, in pCaPath as optional String, in pCertFile as optional String, in pKeyFile as optional String) returns String
+    variable tResult as Integer
+
+    if pCaFile is "" then
+      put nothing into pCaFile
+    end if
+    if pCaPath is "" then
+      put nothing into pCaPath
+    end if
+    if pCertFile is "" then
+      put nothing into pCertFile
+    end if
+    if pKeyFile is "" then
+      put nothing into pKeyFile
+    end if
+
+    unsafe
+      put mosquitto_tls_set(mMosquitto, pCaFile, pCaPath, pCertFile, pKeyFile, nothing) into tResult
+    end unsafe
+    return resolveErrorMessage(tResult)
+  end handler
+
+
   public handler MosquittoConnect(in pHost as String, in pPort as Integer, in pKeepAlive as Integer) returns String
     variable tResult as Integer
 
     unsafe
-      put mosquitto_connect (mMosquitto, pHost, pPort, pKeepAlive) into tResult
+      put mosquitto_connect(mMosquitto, pHost, pPort, pKeepAlive) into tResult
     end unsafe
     return resolveErrorMessage(tResult)
   end handler
@@ -492,11 +534,41 @@ library community.livecode.trevordevore.mosquitto
       return "payload length is too large"
     else if pErrNumber is 10 then
       return "thread support is not enabled"
+    else if pErrNumber is 11 then
+      return "authorization error"
+    else if pErrNumber is 12 then
+      return "ACL denied"
+    else if pErrNumber is 13 then
+      return "unknown error"
     else if pErrNumber is 14 then
       // System call returned error.
       return the system error message
+    else if pErrNumber is 15 then
+      return "EAI lookup error"
+    else if pErrNumber is 16 then
+      return "proxy error"
+    else if pErrNumber is 17 then
+      return "plugin defer error"
     else if pErrNumber is 18 then
       return "invalid UTF-8"
+    else if pErrNumber is 19 then
+      return "keep alive error"
+    else if pErrNumber is 20 then
+      return "lookup error"
+    else if pErrNumber is 21 then
+      return "malformed packet"
+    else if pErrNumber is 22 then
+      return "duplicate property"
+    else if pErrNumber is 23 then
+      return "TLS handshake error"
+    else if pErrNumber is 24 then
+      return "QOS not supported"
+    else if pErrNumber is 25 then
+      return "oversize packet error"
+    else if pErrNumber is 26 then
+      return "OCSP error"
+    else
+      return pErrNumber formatted as string
     end if
   end handler
 end library
